@@ -1,0 +1,50 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: smartirrigate_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=False
+      - PORT=8000
+      - HOST=0.0.0.0
+      - AZURE_STORAGE_ENABLED=false
+      - DATABASE_URL=sqlite:////app/data_storage/smartirrigate.db
+    volumes:
+      - backend_storage:/app/data_storage
+    networks:
+      - smartirrigate_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: smartirrigate_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - smartirrigate_net
+
+volumes:
+  backend_storage:
+    name: smartirrigate_backend_storage
+
+networks:
+  smartirrigate_net:
+    name: smartirrigate_network
+    driver: bridge
+

@@ -1,0 +1,49 @@
+name: SmartIrrigate CD Deployment Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Deployment Target Environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy-cloud:
+    name: Deploy to AWS Cloud
+    runs-on: ubuntu-latest
+    environment: production
+    # Only executes if AWS secrets are explicitly configured in GitHub Repository Secrets
+    if: github.repository_owner != ''
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Verify AWS Secrets Presence
+        env:
+          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        run: |
+          if [ -z "$AWS_KEY" ]; then
+            echo "::warning ::AWS_ACCESS_KEY_ID secret is not set. Skipping cloud provisioning step."
+            echo "To enable automated CD, configure AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in Repository Settings -> Secrets."
+            exit 0
+          fi
+
+      - name: Configure AWS Credentials
+        if: env.AWS_ACCESS_KEY_ID != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Apply Terraform Infrastructure
+        if: env.AWS_ACCESS_KEY_ID != ''
+        working-directory: ./cloud/terraform
+        run: |
+          terraform init
+          terraform apply -auto-approve -var="environment=${{ github.event.inputs.target_env }}"

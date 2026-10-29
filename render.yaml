@@ -1,0 +1,51 @@
+# Render Blueprint Infrastructure as Code (IaC)
+# Reference: https://render.com/docs/blueprint-spec
+version: "1"
+
+services:
+  # ==============================================================================
+  # 1. Backend Web Service (FastAPI + Python + Uvicorn)
+  # ==============================================================================
+  - type: web
+    name: smartirrigate-backend
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: DATABASE_URL
+        value: sqlite:///./smartirrigate.db
+      - key: AZURE_STORAGE_ENABLED
+        value: "false"
+      - key: CORS_ORIGINS
+        # Update with your actual frontend Render URL after initial deploy:
+        value: "https://smartirrigate-frontend.onrender.com,http://localhost:3000,http://localhost:5173"
+
+  # ==============================================================================
+  # 2. Frontend Static Site (React 19 + TypeScript + Vite + Tailwind CSS)
+  # ==============================================================================
+  - type: web
+    name: smartirrigate-frontend
+    runtime: static
+    region: oregon
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      # Single Page Application (SPA) routing fallback
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        # Points to the deployed backend Web Service above:
+        value: https://smartirrigate-backend.onrender.com/api
+
