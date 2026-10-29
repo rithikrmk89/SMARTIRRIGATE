@@ -41,11 +41,14 @@ dist-ssr
 *.sqlite
 *.sqlite3
 *.db
-backend/app/data/*.sqlite3
-backend/app/data/uploads/*
-!backend/app/data/uploads/.gitkeep
-backend/app/data/models/*
-!backend/app/data/models/.gitkeep
+backend/data_storage/*.db
+backend/data_storage/uploads/*
+!backend/data_storage/uploads/.gitkeep
+backend/data_storage/processed/*
+!backend/data_storage/processed/.gitkeep
+backend/data_storage/models/*
+!backend/data_storage/models/.gitkeep
+backend/data_storage/models/model_test*
 
 # IDE & OS
 .vscode/
